@@ -1,0 +1,136 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Cloud restores</title>
+    <link rel="stylesheet" href="pico.classless.blue.css">
+    <link rel="stylesheet" href="style.css">
+    <script>
+
+    </script>
+</head>
+
+<body>
+    <main>
+        <h1>Settings</h1>
+        <div style="display: flex; flex-direction: column;">
+            <div>
+                <label for="mendixapiuser">Mendix API user</label>
+                <input id="mendixapiuser">
+
+            </div>
+            <div>
+                <label for="mendixapikey">Mendix API key</label>
+                <input id="mendixapikey">
+            </div>
+            <div>
+                <label for="postgresuser">Postgres user</label>
+                <input id="postgresuser">
+            </div>
+            <div>
+                <label for="postgrespasword">Postgres password</label>
+                <input id="postgrespassword">
+            </div>
+            <div>
+                <label for="postgresdirectory">Postgres directory</label>
+                <input id="postgresdirectory">
+            </div>
+            <div>
+                <label for="postgresport">Postgres port</label>
+                <input id="postgresport">
+            </div>
+            <div>
+                <label for="downloaddirectory">Download directory</label>
+                <input id="downloaddirectory">
+            </div>
+            <div>
+                <textarea id="message" class="settings-message"></textarea>
+            </div>
+            <div>
+                <button id="save">Save</button>
+                <button id="cancel">Cancel</button>
+            </div>
+        </div>
+
+    </main>
+    <script>
+        function sendMessage(message, data) {
+            if (window.chrome?.webview) {
+                window.chrome.webview.postMessage({ message, data })
+            } else if (window.webkit?.messageHandlers.studioPro) {
+                window.webkit.messageHandlers.studioPro.postMessage(JSON.stringify({ message, data }))
+            }
+        }
+        function updateSettings(Data) {
+            document.getElementById('mendixapiuser').value = Data.MendixApiUser;
+            document.getElementById('mendixapikey').value = Data.MendixApiKey
+            document.getElementById('postgresuser').value = Data.PostgresUser;
+            document.getElementById('postgrespassword').value = Data.PostgresPassword;
+            document.getElementById('postgresport').value = Data.PostgresPort;
+            document.getElementById('postgresdirectory').value = Data.PostgresDirectory;
+            document.getElementById('downloaddirectory').value = Data.DownloadDirectory;
+        }
+        function setMessage(message, className) {
+            var elem = document.getElementById("message");
+            if (elem) {
+                elem.className = className;
+                elem.value = message;
+                if (message) { elem.show } else { elem.hide };
+            }
+        }
+        document.getElementById('save').addEventListener('click', function () {
+            var message = {};
+            message.MendixApiUser = document.getElementById('mendixapiuser').value;
+            message.MendixApiKey = document.getElementById('mendixapikey').value;
+            message.PostgresUser = document.getElementById('postgresuser').value;
+            message.PostgresPassword = document.getElementById('postgrespassword').value;
+            message.PostgresPort = document.getElementById('postgresport').value;
+            message.PostgresDirectory = document.getElementById('postgresdirectory').value;
+            message.DownloadDirectory = document.getElementById('downloaddirectory').value;
+            if (message.MendixApiUser && message.MendixApiKey && message.PostgresUser && message.PostgresPassword
+                && message.PostgresPort && message.PostgresDirectory && message.DownloadDirectory) {
+                sendMessage('savesettings', message);
+            } else {
+                setMessage('All fields are required.', 'errormessage');
+            }
+        });
+        document.getElementById('cancel').addEventListener('click', function () {
+            sendMessage('cancelsettings');
+        });
+        document.addEventListener("DOMContentLoaded", function () {
+            registerMessageListener(handleMessage);
+            sendMessage('settingsloaded');
+        });
+        function registerMessageListener(eventHandler) {
+            if (window.chrome?.webview) {
+                window.chrome.webview.addEventListener("message", (event) => eventHandler(event.data))
+                sendMessage("MessageListenerRegistered")
+            } else if (window.webkit?.messageHandlers.studioPro) {
+                window.WKPostMessage = (json) => {
+                    const wkMessage = JSON.parse(json)
+                    eventHandler(wkMessage)
+                }
+                sendMessage("MessageListenerRegistered")
+            }
+        }
+        async function handleMessage(event) {
+            console.log("event incoming", event);
+            if (event.message === "updateSettings") {
+                await updateSettings(event.data);
+            }
+            if (event.message === "setDark") {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+            if (message === "setErrorMessage") {
+                setMessage(data.Text, 'errormessage');
+            }
+        }
+  
+    </script>
+
+</body>
+
+</html>

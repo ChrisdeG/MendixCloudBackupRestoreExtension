@@ -1,0 +1,219 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Cloud restore</title>
+    <link rel="stylesheet" href="pico.classless.blue.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body onload="init()">
+    <main>
+        <div style="display: flex; flex-direction: column;">
+            <h4>Cloud database restore</h4>
+            <div>
+                <button id="setting" class="settings">Settings</button>
+            </div>
+            <table class="button-container">
+                <tr class="tr-appl">
+                    <td class="td-app">
+                        <label for="applist">Applications</label>
+                        <select id="applist">
+                        </select>
+                        </>
+                    </td>
+                    <td class="td-button">
+                        <div class="refresh-holder">
+                            <button id="getapps" class="getapps">Get apps</button>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <div>
+                <label for="envlist">Environments</label>
+                <select id="envlist">
+                </select>
+            </div>
+            <div>
+                <label for="backuplist">Backups</label>
+                <select id="backuplist">
+                </select>
+            </div>
+            <div style="display: flex; align-items: stretch;">
+                <div class="downloadcontainer">
+                    <button id="download" disabled>Download and restore</button>
+                </div>
+                <div class="cancelcontainer">
+                    <button id="cancel" >Cancel</button>
+                </div>
+            </div>
+            <div>
+                <progress id="progress" class="progress" value="0" max="100"> </progress>
+                </div>
+                <div>
+                    <textarea id="message"></textarea>
+                </div>
+            </div>
+
+</main>
+    <script>
+        function sendMessage(message, data) {
+            if (window.chrome?.webview) {
+                window.chrome.webview.postMessage({ message, data })
+            } else if (window.webkit?.messageHandlers.studioPro) {
+                window.webkit.messageHandlers.studioPro.postMessage(JSON.stringify({ message, data }))
+            }
+        }
+        function registerMessageListener(eventHandler) {
+            if (window.chrome?.webview) {
+                window.chrome.webview.addEventListener("message", (event) => eventHandler(event.data))
+                sendMessage("MessageListenerRegistered")
+            } else if (window.webkit?.messageHandlers.studioPro) {
+                window.WKPostMessage = (json) => {
+                    const wkMessage = JSON.parse(json)
+                    eventHandler(wkMessage)
+                }
+                sendMessage("MessageListenerRegistered")
+            }
+        }
+        function setProgress(progress) {
+            document.getElementById("progress").value = progress;
+        }
+        function setMessage(message, className) {
+            var elem = document.getElementById("message");
+            if (elem) {
+                elem.className = className;
+                elem.value = message;
+            }
+        }
+        function addApp(key, value) {
+            console.log("add app " + key + " " + value);
+            applist = document.getElementById('applist');
+            applist.options[applist.options.length] = new Option(key, value);
+        }
+        function addEnvironment(key, value) {
+            console.log("add env " + key + " " + value);
+            envlist = document.getElementById('envlist');
+            envlist.options[envlist.options.length] = new Option(key, value);
+        }
+        function addBackup(key, value) {
+            console.log("add env " + key + " " + value);
+            backuplist = document.getElementById('backuplist');
+            backuplist.options[backuplist.options.length] = new Option(key, value);
+        }
+
+        function appListClick() {
+            console.log("getenvs", document.getElementById('applist').selectedIndex)
+            var message = {};
+            message.Type = 'getenvs';
+            message.Index = document.getElementById('applist').selectedIndex;
+            sendMessage('getenvs', message);
+        }
+        function envListClick() {
+            console.log("getbackups", document.getElementById('envlist').value, document.getElementById('applist').value)
+            var message = {};
+            message.Type = 'getbackups';
+            message.Index = document.getElementById('applist').selectedIndex;
+            message.Environment = document.getElementById('envlist').value;
+            sendMessage('getbackups', message);
+        }
+        function downloadClick() {
+            console.log("download", document.getElementById('envlist').value, document.getElementById('applist').value, document.getElementById('backuplist').value)
+            var message = {};
+            message.Index = document.getElementById('applist').selectedIndex;
+            message.Environment = document.getElementById('envlist').value;
+            message.Backup = document.getElementById('backuplist').selectedIndex;
+            sendMessage("download", message);
+        }
+        function removeOptions(selectElement) {
+            if (selectElement) {
+                for (var i = selectElement.options.length - 1; i >= 0; i--) {
+                    selectElement.remove(i);
+                }
+            }
+        }
+        function clearEnvironmentList() {
+            removeOptions(document.getElementById('envlist'));
+        }
+        function clearAppList() {
+            removeOptions(document.getElementById('applist'));
+        }
+        function clearBackupList() {
+            removeOptions(document.getElementById('backuplist'));
+        }
+        function registerMessageListener(eventHandler) {
+            if (window.chrome?.webview) {
+                window.chrome.webview.addEventListener("message", (event) => eventHandler(event.data))
+                sendMessage("MessageListenerRegistered")
+            } else if (window.webkit?.messageHandlers.studioPro) {
+                window.WKPostMessage = (json) => {
+                    const wkMessage = JSON.parse(json)
+                    eventHandler(wkMessage)
+                }
+                sendMessage("MessageListenerRegistered")
+            }
+        }
+        function init() {
+            registerMessageListener(handleMessage);
+        }
+        async function handleMessage(event) {
+            console.log("event incoming", event);
+            const { message, data } = event;
+            if (message === "clearAppList") {
+                clearAppList();
+            }
+            if (message === "addApp") {
+                addApp(data.Key, data.Value);
+            }
+            if (message === "clearEnvList") {
+                clearEnvironmentList();
+            }
+            if (message === "addEnvironment") {
+                addEnvironment(data.Key, data.Value);
+            }
+            if (message === "clearBackupList") {
+                clearBackupList();
+            }
+            if (message === "addBackup") {
+                addBackup(data.Key, data.Value);
+            }
+            if (message === "setProgress") {
+                setProgress(data.Progress);
+            }
+            if (message === "setMessage") {
+                setMessage(data.Text, '');
+            }
+            if (message === "setErrorMessage") {
+                setMessage(data.Text, 'errormessage');
+            }
+            if (message === "setDark") {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+            if (message == "disableButton") {
+                document.getElementById(data.Key).disabled = data.Value == "true";
+            }
+        }
+        document.getElementById('setting').addEventListener('click', function () {
+            sendMessage('settings');
+            console.log("Click setting")
+        });
+        document.getElementById('getapps').addEventListener('click', function () {
+            console.log("getapps")
+            sendMessage('getapps');
+        });
+        document.getElementById('cancel').addEventListener('click', function () {
+            console.log("cancel")
+            sendMessage('cancel');
+        });
+        document.getElementById('applist').addEventListener('change', appListClick);
+
+        document.getElementById('envlist').addEventListener('change', envListClick);
+        document.getElementById('download').addEventListener('click', downloadClick);
+    </script>
+
+</body>
+
+</html>
